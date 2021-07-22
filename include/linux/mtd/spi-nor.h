@@ -27,7 +27,9 @@
 #define SNOR_MFR_SST		CFI_MFR_SST
 #define SNOR_MFR_WINBOND	0xef /* Also used by some Spansion */
 #define SNOR_MFR_PUYA		0x85
-
+#define SNOR_MFR_XTX		0x0b
+#define SNOR_MFR_XMC		0x20
+#define SNOR_MFR_FM		0xa1
 /*
  * Note on opcode nomenclature: some opcodes have a format like
  * SPINOR_OP_FUNCTION{4,}_x_y_z. The numbers x, y, and z stand for the number
@@ -80,6 +82,16 @@
 #define SPINOR_OP_BE_32K_4B	0x5c	/* Erase 32KiB block */
 #define SPINOR_OP_SE_4B		0xdc	/* Sector erase (usually 64KiB) */
 
+/* Used for Macronix flasges */
+#define SPINOR_OP_RDDPB         0xe0    /* Read DPB register */
+#define SPINOR_OP_WRDPB         0xe1    /* Write DPB register */
+#define SPINOR_OP_RDSPB         0xe2    /* Read SPB register */
+#define SPINOR_OP_WRSPB         0xe3    /* Write SPB register */
+#define SPINOR_OP_ESSPB         0xe4    /* Erase SPB register */
+#define SPINOR_OP_RDSCUR        0x2b    /* Read security register */
+#define SPINOR_OP_WRSCUR        0x2f    /* Write security register */
+#define SPINOR_OP_WPSEL         0x68    /* Write protect selection */
+
 /* Double Transfer Rate opcodes - defined in JEDEC JESD216B. */
 #define SPINOR_OP_READ_1_1_1_DTR	0x0d
 #define SPINOR_OP_READ_1_2_2_DTR	0xbd
@@ -114,6 +126,12 @@
 /* Used for Micron flashes only. */
 #define SPINOR_OP_RD_EVCR      0x65    /* Read EVCR register */
 #define SPINOR_OP_WD_EVCR      0x61    /* Write EVCR register */
+/* Used for individual lock*/
+#define SPINOR_OP_IBLK          0x36    /* Lock individual block */
+#define SPINOR_OP_IBULK         0x39    /* Unlock individual block */
+#define SPINOR_OP_RDBLK         0x3d    /* Read block lock */
+#define SPINOR_OP_GBLK          0x7e    /* Lock global block */
+#define SPINOR_OP_GBULK         0x98    /* Unlock global block */
 
 /* Status Register bits. */
 #define SR_WIP			BIT(0)	/* Write in progress */
@@ -132,6 +150,8 @@
 
 /* Enhanced Volatile Configuration Register bits */
 #define EVCR_QUAD_EN_MICRON	BIT(7)	/* Micron Quad I/O */
+#define CR_TB_MX		BIT(3)  /* Macronix Top/Bottom protect */
+#define SCUR_WPSEL_MX           BIT(7)  /* Macronix WPSEL bit */
 
 /* Flag Status Register bits */
 #define FSR_READY		BIT(7)	/* Device status, 0 = Busy, 1 = Ready */

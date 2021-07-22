@@ -32,7 +32,7 @@ typedef struct _sunxi_flash_desc {
 	int (*download_toc) (unsigned char *buf, int len, unsigned int ext);
 	int (*write_end) (void);
 	int (*erase_area)(uint start_bloca, uint nblock);
-
+	int (*protect)(uint start, uint len, int lock);
 }sunxi_flash_desc;
 
 

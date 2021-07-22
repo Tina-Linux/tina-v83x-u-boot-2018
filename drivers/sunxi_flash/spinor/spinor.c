@@ -26,6 +26,7 @@
 
 
 static struct spi_flash *flash;
+int spi_flash_autolock = 1;
 
 #define SPINOR_DEBUG 0
 
@@ -35,6 +36,30 @@ static struct spi_flash *flash;
 #define spinor_debug(fmt, arg...)
 #endif
 
+static int
+sunxi_flash_spinor_protect(u32 start, u32 len, int lock)
+{
+	int ret;
+	bool prot;
+
+	if(!flash)
+		return -1;
+
+	if (lock == 1) {
+		prot = true;
+		ret = spi_flash_protect(flash, start, len, prot);
+		printf("lock ret:%d\n", ret);
+	} else if (lock == 0) {
+		prot = false;
+		ret = spi_flash_protect(flash, start, len, prot);
+		printf("unlock ret:%d\n", ret);
+	} else if (lock == 2) {
+		ret = spi_flash_is_protected(flash, start, len);
+		printf("is protected:%d\n", ret);
+	}
+
+	return 0;
+}
 
 /**
  * Write a block of data to SPI flash, first checking if it is different from
@@ -183,6 +208,9 @@ _sunxi_flash_spinor_write(uint start_block, uint nblock, void *buffer)
 		return 0;
 	}
 
+	if (spi_flash_autolock && get_boot_work_mode() == WORK_MODE_BOOT)
+		spi_flash_protect(flash, offset, len, false);
+
 	erase_size = flash->erase_size;
 	if (offset % erase_size) {
 		printf("SF: write offset not multiple of erase size\n");
@@ -219,18 +247,37 @@ _sunxi_flash_spinor_write(uint start_block, uint nblock, void *buffer)
 			spinor_debug("write error\n");
 			goto __err;
 		}
+
+		free(align_buf);
+
 		/* update info */
 		len -= erase_align_size;
 		offset += erase_align_size;
 		buffer += erase_align_size;
 	}
-	if(len)
-		ret = _spi_flash_update(flash, offset, len, buffer);
+
+	if (len) {
+#ifdef CONFIG_SUNXI_NOR_SPRITE_TIME_OPTIMIZE
+		if (sunxi_nor_force_write_flag)
+			ret = spi_flash_write(flash, offset, len, buffer);
+		else
+#endif
+			ret = _spi_flash_update(flash, offset, len, buffer);
+	}
+
+	/* protect all after write */
+	if (spi_flash_autolock && get_boot_work_mode() == WORK_MODE_BOOT)
+		spi_flash_protect(flash, 0, flash->size, true);
+
 	return ret == 0 ? nblock : 0;
 
 __err:
 	if(align_buf)
 		free(align_buf);
+	/* protect all after write */
+	if (get_boot_work_mode() == WORK_MODE_BOOT)
+		spi_flash_protect(flash, 0, flash->size, true);
+
 	return 0;
 }
 
@@ -322,6 +369,14 @@ sunxi_flash_spinor_probe(void)
 	}
 	set_boot_storage_type(STORAGE_NOR);
 
+	if (get_boot_work_mode() == WORK_MODE_BOOT) {
+		printf("boot mode, lock all\n");
+		spi_flash_protect(flash, 0, flash->size, true);
+	} else {
+		printf("not boot mode, unlock all\n");
+		spi_flash_protect(flash, 0, flash->size, false);
+	}
+
 	return 0;
 
 }
@@ -344,6 +399,14 @@ sunxi_flash_spinor_init(int boot_mode, int res)
 		return -ENODEV;
 	}
 
+	if (get_boot_work_mode() == WORK_MODE_BOOT) {
+		printf("boot mode, lock all\n");
+		spi_flash_protect(flash, 0, flash->size, true);
+	} else {
+		printf("not boot mode, unlock all\n");
+		spi_flash_protect(flash, 0, flash->size, false);
+	}
+
 	return 0;
 }
 
@@ -352,8 +415,10 @@ sunxi_flash_spinor_exit(int force)
 {
 	if(flash) {
 		spinor_debug("EXIT\n");
-		spi_nor_reset_device(flash);
-
+		/*only finally exit*/
+		if (force == 2) {
+			spi_nor_reset_device(flash);
+		}
 		/*get efex cmd when finish partitions.
 		  but we still need to dwonload boot0 and uboot
 		  so can't free flash at this moment*/
@@ -373,7 +438,10 @@ sunxi_flash_spinor_flush(void)
 static int
 sunxi_flash_spinor_force_erase(void)
 {
-	return sunxi_flash_spinor_erase(1 , NULL);
+	struct mtd_info *mtd = &flash->mtd;
+
+	printf("The Chip Erase size is: %lldM ...\n", mtd->size / 1024 / 1024);
+	return mtd->_force_erase(mtd);
 }
 
 static int
@@ -451,5 +519,6 @@ sunxi_flash_desc sunxi_spinor_desc =
 	.download_spl = sunxi_flash_spinor_download_spl,
 	.download_toc = sunxi_flash_spinor_download_toc,
 	.erase_area = sunxi_flash_spinor_erase_area,
+	.protect = sunxi_flash_spinor_protect,
 };
 

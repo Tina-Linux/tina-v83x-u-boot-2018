@@ -579,7 +579,8 @@ void reset_misc(void)
   */
 void board_quiesce_devices(void)
 {
-	sunxi_flash_exit(1);
+	/*modify 2 for nor to finally exit*/
+	sunxi_flash_exit(2);
 #ifdef CONFIG_SPI_USE_DMA
 	sunxi_dma_exit();
 #endif

@@ -193,4 +193,12 @@ static inline int spi_flash_protect(struct spi_flash *flash, u32 ofs, u32 len,
 		return flash->flash_unlock(flash, ofs, len);
 }
 
+static inline int spi_flash_is_protected(struct spi_flash *flash, u32 ofs, u32 len)
+{
+	if (!flash->flash_is_locked)
+		return -EOPNOTSUPP;
+
+	return flash->flash_is_locked(flash, ofs, len);
+}
+
 #endif /* _SPI_FLASH_H_ */

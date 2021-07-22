@@ -114,6 +114,18 @@ int sunxi_flash_erase_area(uint start_block, uint nblock)
 	return ret;
 }
 
+int sunxi_flash_protect(uint start, uint len, int lock)
+{
+	int ret = 0;
+
+	if (current_flash->protect != NULL) {
+		printf("%s %d start:%d len:%d lock:%d\n", __func__, __LINE__, start, len, lock);
+		ret = current_flash->protect(start, len, lock);
+	}
+
+	return ret;
+}
+
 int sunxi_sprite_read(uint start_block, uint nblock, void *buffer)
 {
 	return sprite_flash->read(start_block, nblock, buffer);

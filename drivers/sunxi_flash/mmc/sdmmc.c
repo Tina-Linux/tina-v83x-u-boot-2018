@@ -547,7 +547,8 @@ int sunxi_flash_mmc_probe(void)
 
 int sunxi_flash_mmcs_probe(void)
 {
-	return sdmmc_init_for_sprite(0, 2);
+	// For Debug, Flash to Card
+	return sdmmc_init_for_sprite(0, 0);
 }
 
 #if 1
